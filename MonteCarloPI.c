@@ -1,3 +1,8 @@
+// EXERCÍCIO - PROGRAMAÇÃO CONCORRENTE
+// UFPB - 2023.1
+
+// 1. Faça um programa em C/C++ para calcular o valor de pi usando o método de Monte Carlo. O programa deve solicitar a quantidade de processos e criar os processos descendentes - cada um dos quais deve gerar um número aleatório de pontos e calcular o número de pontos que caem dentro do círculo unitário. O processo principal deve então somar os resultados dos processos descendentes para obter uma estimativa do valor de pi.
+
 #include <stdio.h>
 #include <unistd.h>
 #include <time.h>
