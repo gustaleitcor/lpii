@@ -61,6 +61,8 @@ int main() {
       stat = WEXITSTATUS(stat);
       printf("%d\n", stat);
       total += stat;
+    } else {
+      n_process--;
     }
   }
 
