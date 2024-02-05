@@ -3,6 +3,7 @@
 //
 // 2. Faça um programa em C/C++ que crie 10 processos que dormirão um tempo aleatório entre 5 e 20 segundos. Faça o processo principal dormir por 10 segundos e depois faça-o finalizar todos os processos descedentes que ainda estiverem ativos (use a função kill() para finalizar os processos descendentes).
 
+#include <stddef.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <wait.h>
@@ -25,7 +26,7 @@ int main()
 
         srand(getpid());
 
-        unsigned int duration = (rand() % 15) + 6;
+        size_t duration = (rand() % 15) + 6;
 
         printf("Process %d sleeping for %zu\n", getpid(), duration);
 
