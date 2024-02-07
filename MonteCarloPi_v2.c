@@ -27,6 +27,7 @@ int monte_carlo(int ch[2]) {
     }
   }
 
+  close(ch[0]);
   write(ch[1], &inner_circle, sizeof(inner_circle));
 
   exit(EXIT_SUCCESS);
@@ -55,6 +56,7 @@ int main() {
   for (unsigned int i = 0; i < N_PROCESS; i++) {
     waitpid(pids[i], NULL, 0);
     long double response;
+    close(ch[i][1]);
     read(ch[i][0], &response, sizeof(response));
     total += response;
   }
