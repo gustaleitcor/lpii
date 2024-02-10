@@ -10,7 +10,7 @@
 #define START 0
 #define END 25
 #define OFFSET 'A'
-#define TARGET "GHIIIVB"
+#define TARGET "ZZZZZZZ"
 
 void add(char *s, size_t size, unsigned int op);
 void fast_add(char *s, size_t size, unsigned int op);
@@ -111,7 +111,7 @@ void fast_add(char *s, size_t size, unsigned int op) {
   unsigned int diff = END - START + 1;
   unsigned int remainder;
 
-  for (unsigned int i = 0; i < size; i++) {
+  for (unsigned int i = 0; (i < size) && (op != 0); i++) {
     remainder = (op + s[i]) % diff;
     s[i] = remainder;
     op = (op + s[i]) / diff;
