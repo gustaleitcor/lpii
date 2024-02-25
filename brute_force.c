@@ -18,7 +18,7 @@
 char *encrypt(const char *str, int tamanho);
 // Função para pular para a proxima sequencia de caracteres Ex: AAAA + 1 = BAAA,
 // YABA + 2 = ABBA
-int add(char *s, size_t size, int op);
+int add(char *s, size_t size, unsigned int op);
 // Função que verifica se duas sequencias de caracteres são iguais
 int is_eq(char *s1, char *s2, size_t size);
 
@@ -156,7 +156,7 @@ int main() {
 // com um numero
 // Ex : AAAA + 1 = BAAA, YABA + 2 = ABBA
 
-int add(char *s, size_t size, int op) {
+int add(char *s, size_t size, unsigned int op) {
   const unsigned int diff = END - START + 1;
   unsigned int remainder = 1;
 
