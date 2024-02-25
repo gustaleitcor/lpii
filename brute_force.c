@@ -18,7 +18,7 @@
 char *encrypt(const char *str, int tamanho);
 // Função para pular para a proxima sequencia de caracteres Ex: AAAA + 1 = BAAA,
 // YABA + 2 = ABBA
-void add(char *s, size_t size, unsigned int op);
+int add(char *s, size_t size, int op);
 // Função que verifica se duas sequencias de caracteres são iguais
 int is_eq(char *s1, char *s2, size_t size);
 
@@ -83,7 +83,17 @@ int main() {
           // continua no while
           while (!is_eq(encrypted_str, target, 4)) {
             // Segue para a proxima sequencia. Ex: ZABA + 1 = ABBA
-            add(original_str, 4, 1);
+            if (!add(original_str, 4, 1)) {
+              // Se ocorrer overflow da variavel, corta a execução
+              char *response_overflow = (char *)malloc(sizeof(char) * 25);
+              sprintf(response_overflow, "%c%c%c%c -> OVERFLOW\n", target[0],
+                      target[1], target[2], target[3]);
+              write(ch[1], response_overflow, sizeof(char) * 25);
+              free(encrypted_str);
+              free(target);
+              free(response_overflow);
+              return EXIT_FAILURE; // Se der overflow, a execução é interrompida
+            };
             // Liberação da alocação da ultima palavra encriptada teste
             free(encrypted_str);
             // Criação de uma nova palavra encriptada teste
@@ -96,11 +106,11 @@ int main() {
                  original_str[3]);
 
           // A solução é enviada pelo pipe para o processo pai
-          char *response = (char *)malloc(sizeof(char) * 15);
+          char *response = (char *)malloc(sizeof(char) * 25);
           sprintf(response, "%c%c%c%c -> %c%c%c%c\n", target[0], target[1],
                   target[2], target[3], original_str[0], original_str[1],
                   original_str[2], original_str[3]);
-          write(ch[1], response, sizeof(char) * 15);
+          write(ch[1], response, sizeof(char) * 25);
 
           // Por fim é liberado a alocação do restante das variaveis dinamicas
           free(encrypted_str);
@@ -112,9 +122,9 @@ int main() {
 
       // Espera por todos os processos de cada palavra
       for (unsigned int j = 0; j < total_keys; j++) {
-        char *response = (char *)malloc(sizeof(char) * 15);
+        char *response = (char *)malloc(sizeof(char) * 25);
         // Faz a leitura do pipe de cada filho
-        read(ch[0], response, sizeof(char) * 15);
+        read(ch[0], response, sizeof(char) * 25);
         // Salva no arquivo na pasta senhas_originais
         fprintf(fp_original, "%s", response);
         // Libera a alocação do response
@@ -146,15 +156,28 @@ int main() {
 // com um numero
 // Ex : AAAA + 1 = BAAA, YABA + 2 = ABBA
 
-void add(char *s, size_t size, unsigned int op) {
+int add(char *s, size_t size, int op) {
   const unsigned int diff = END - START + 1;
   unsigned int remainder = 1;
 
-  for (unsigned int i = 0; (i < size) && (op != 0); i++) {
+  for (unsigned int i = 0; (i < (size - 1)); i++) {
     remainder = (op + s[i] - START) % diff;
     op = (op + s[i] - START) / diff;
     s[i] = remainder + START;
+
+    if (op == 0) {
+      return 1;
+    }
   }
+
+  remainder = (op + s[size - 1] - START) % diff;
+  op = (op + s[size - 1] - START) / diff;
+  s[size - 1] = remainder + START;
+
+  if (op > 0) {
+    return 0;
+  } else
+    return 1;
 }
 
 // Implementação da função que erifica se duas sequencias de caracteres são
