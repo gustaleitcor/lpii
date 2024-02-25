@@ -1,4 +1,5 @@
 #include <signal.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,131 +7,120 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define N_PROCESS 100
-#define START 0
-#define END 25
-#define OFFSET 'A'
-#define TARGET "ZZZZZZZ"
+#define NUM_LETRAS 26
+#define ASCII_A 65
 
+#define N_CHAR 4
+#define START 'A'
+#define END 'Z'
+
+// Função encrypt
+char *encrypt(const char *str, int tamanho);
+// Função para pular para a proxima sequencia de caracteres Ex: AAAA -> BAAA
 void add(char *s, size_t size, unsigned int op);
-void fast_add(char *s, size_t size, unsigned int op);
-unsigned long long int powu(int x, size_t y);
-
+// Função que verifica se duas sequencias de caracteres são iguais
 int is_eq(char *s1, char *s2, size_t size);
 
-int divide_and_conquer(char *start, size_t size, unsigned int pace,
-                       char *target, int ch[2]);
-
-void prints(char *s, size_t size);
+// Implementações das funções acima no rodapé do arquivo
 
 int main() {
-  size_t n_char = strlen(TARGET);
-  const unsigned long long int max = powu(26, n_char);
-  pid_t pid;
-  pid_t pids[N_PROCESS];
-  int ch[2];
 
-  if (pipe(ch) == -1)
-    return -1;
+  pid_t file_pid, file_pids[10];
 
-  char s[sizeof(char) * n_char];
-  char target[] = TARGET;
+  // Inicia-se com a criação de um processo para cada arquivo
+  for (unsigned int i = 0; i < 10; i++) {
+    if ((file_pid = fork()) == 0) {
 
-  for (unsigned int i = 0; i < n_char; i++) {
-    s[i] = (char)START;
-    target[i] -= OFFSET;
-  }
+      // Abertura do arquivo para leitura
+      char *file_format = "./senhas/%d.txt";
+      char *file_path = (char *)malloc(sizeof(char) * strlen(file_format));
+      sprintf(file_path, file_format, i);
 
-  for (unsigned int i = 0; i < N_PROCESS - 1; i++) {
-    if ((pid = fork()) == 0) {
-      return divide_and_conquer(s, n_char, (max / N_PROCESS), target, ch);
+      FILE *fp = fopen(file_path, "r");
+
+      if (!fp) {
+        return -1;
+      }
+
+      printf("[%d] Arquivo %s aberto\n", getpid(), file_path);
+
+      char *target = NULL;
+      size_t target_size;
+      char *encrypted_str;
+      char original_str[N_CHAR];
+      unsigned int total_keys = 0;
+
+      // Obtenção de cada sequência de caracteres alvo do arquivo
+      while (getline(&target, &target_size, fp) != EOF) {
+        // Contador para a quantidade de senhas
+        total_keys++;
+
+        // Setar a sequência de caracteres teste para AAAA
+        for (int k = 0; k < N_CHAR; k++) {
+          original_str[k] = (char)START;
+        }
+
+        // Criação de um processo para cada palavra
+        if (fork() == 0) {
+          // Encriptação da primeira palavra
+          encrypted_str = encrypt(original_str, 4);
+          // Enquanto a palavra encriptada teste for diferente da palavra alvo,
+          // continua no while
+          while (!is_eq(encrypted_str, target, 4)) {
+            // Segue para a proxima sequencia. Ex: DCBA -> ECBA
+            add(original_str, 4, 1);
+            // Liberação da alocação da ultima palavra encriptada teste
+            free(encrypted_str);
+            // Criação de uma nova palavra encriptada teste
+            encrypted_str = encrypt(original_str, 4);
+          };
+
+          // A solução é printada no terminal
+          printf("%c%c%c%c -> %c%c%c%c\n", target[0], target[1], target[2],
+                 target[3], original_str[0], original_str[1], original_str[2],
+                 original_str[3]);
+
+          // Por fim é liberado a alocação da ultima sequencia de caracteres
+          // encriptada
+          free(encrypted_str);
+          free(target);
+          return EXIT_SUCCESS;
+        }
+      }
+
+      // Espera por todos os processos de cada palavra
+      for (unsigned int j = 0; j < total_keys; j++) {
+        wait(NULL);
+      }
+
+      // Liberação do restante das variaveis alocadas dinamicamente
+      free(file_path);
+      // Fechamento do arquivo
+      fclose(fp);
+
+      return EXIT_SUCCESS;
     } else {
-      pids[i] = pid;
+      file_pids[i] = file_pid;
     }
-    fast_add(s, n_char, (max / N_PROCESS));
-    prints(s, n_char);
   }
 
-  if ((pid = fork()) == 0) {
-    return divide_and_conquer(
-        s, n_char, max - (N_PROCESS - 1) * (max / N_PROCESS), target, ch);
-  } else {
-    printf("pace: %llu\n", max - (N_PROCESS - 1) * (max / N_PROCESS));
-    fast_add(s, n_char, max - (N_PROCESS - 1) * (max / N_PROCESS));
-
-    prints(s, n_char);
-
-    pids[N_PROCESS - 1] = pid;
+  // Espera por todos os processos de cada arquivo
+  for (unsigned int i = 0; i < 10; i++) {
+    wait(NULL);
   }
-
-  printf("Waiting for response: \n");
-
-  char buffer[sizeof(char) * n_char];
-
-  read(ch[0], buffer, sizeof(char) * n_char);
-
-  for (unsigned int i = 0; i < N_PROCESS; i++) {
-    kill(pids[i], SIGINT);
-  }
-
-  prints(buffer, sizeof(char) * n_char);
 
   return 0;
 }
 
-void prints(char *s, size_t size) {
-  for (unsigned int i = 0; i < size; i++) {
-    printf("%c ", s[i] + OFFSET);
-  }
-  printf("\n");
-}
-
-unsigned long long int powu(int x, size_t y) {
-  unsigned long long int response = 1;
-  for (unsigned int i = 0; i < y; i++) {
-    response *= x;
-  }
-  return response;
-}
-
-// !DEPRECATED DONT USE
-// !THERES A BUG
 void add(char *s, size_t size, unsigned int op) {
-  s[0]++;
-  for (unsigned int i = 0; i <= size - 1; i++) {
-    if (s[i] > END) {
-      s[i] = (char)START;
-      s[i + 1]++;
-    } else {
-      break;
-    }
-  }
-}
-
-void fast_add(char *s, size_t size, unsigned int op) {
-  unsigned int diff = END - START + 1;
-  unsigned int remainder;
+  const unsigned int diff = END - START + 1;
+  unsigned int remainder = 1;
 
   for (unsigned int i = 0; (i < size) && (op != 0); i++) {
-    remainder = (op + s[i]) % diff;
-    s[i] = remainder;
-    op = (op + s[i]) / diff;
+    remainder = (op + s[i] - START) % diff;
+    op = (op + s[i] - START) / diff;
+    s[i] = remainder + START;
   }
-}
-
-int divide_and_conquer(char *start, size_t size, unsigned int pace,
-                       char *target, int ch[2]) {
-  do {
-    if (is_eq(start, target, size)) {
-      printf("[%d] FOUND ", getpid());
-      prints(start, size);
-      write(ch[1], start, sizeof(char) * size);
-    }
-
-    fast_add(start, size, 1);
-  } while (pace--);
-
-  exit(EXIT_SUCCESS);
 }
 
 int is_eq(char *s1, char *s2, size_t size) {
@@ -142,14 +132,13 @@ int is_eq(char *s1, char *s2, size_t size) {
   return 1;
 };
 
-// char s[N_CHAR];
-// for (unsigned int i = 0; i < N_CHAR; i++)
-//   s[i] = (char)65;
-
-// for (unsigned int i = 0; i < max; i++) {
-//   for (unsigned int i = 0; i < N_CHAR; i++) {
-//     printf("%c ", s[i]);
-//   }
-//   printf("\n");
-//   add(s);
-// }
+char *encrypt(const char *str, int tamanho) {
+  char *str_result = (char *)malloc(sizeof(char) * tamanho);
+  for (int i = 0; i < tamanho; i++) {
+    if (str[i] >= 'A' && str[i] <= 'Z') {
+      int chave = str[i] - ASCII_A;
+      str_result[i] = (str[i] - ASCII_A + chave) % NUM_LETRAS + ASCII_A;
+    }
+  }
+  return str_result;
+}
